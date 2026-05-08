@@ -13,14 +13,18 @@ O objetivo principal destes testes não é apenas navegar pelo site, mas sim doc
 
 Durante a análise exploratória, os seguintes comportamentos inesperados foram detectados e incorporados como cenários de teste para validação de falhas:
 
-1. **Falha Crítica no Login**: Ao inserir as credenciais, corretas ou não, um modal com a mensagem *"Seu login está incorreto, quer continuar?"* é exibido. Se o usuário confirmar, o sistema libera o acesso para a dashboard mesmo com senhas incorretas.
+1. **Falha UX/Lógica no Login**: Ao inserir as credenciais **corretas** (`qa@test.com` e `123456`), o sistema exibe indevidamente um modal com a mensagem *"Seu login está incorreto, quer continuar?"*. Apesar da mensagem de erro, se o usuário confirmar, o sistema libera o acesso para a dashboard. (Tentativas com credenciais incorretas são corretamente barradas, confirmando que a falha está no fluxo de sucesso e não em uma liberação geral).
 2. **Falha de Sessão**: O sistema não encerra a sessão corretamente, permitindo que o usuário acesse a dashboard utilizando o recurso de avançar/voltar do navegador.
 3. **Tela em Branco (Blank Page)**: O botão `Colmeia Forms` no menu lateral redireciona a URL com sucesso, mas o sistema falha em renderizar qualquer conteúdo, deixando o usuário em uma tela 100% vazia.
 4. **Ausência de Logout e Interação no Perfil**: O menu do "Candidato" no canto superior direito é não interativo e falha em prover um botão de "Sair/Logout".
 5. **Links Inativos no Login**: O botão "Esqueceu sua senha?" não possui função, e a tela sequer possui uma opção de "Cadastrar" (Melhoria UX/Bug).
 6. **Ausência de Persistência (Banco de Dados)**: Ao criar um banco de dados, caso a página sofra um *refresh* (F5), os dados são perdidos imediatamente.
-7. **Falha no Arquivamento (Banco de Dados)**: Arquivar um banco de dados faz com que ele desapareça da lista ativa, mas não conste na aba de arquivados (Perda de dados aparente).
+7. **Falha no Arquivamento (Banco de Dados)**: Arquivar um banco de dados faz com que ele desapareça da lista ativa, mas não conste na aba de arquivados (Perda de dados aparente). *(Observação de UX: Além do bug, o sistema peca ao não exibir um modal de confirmação antes do arquivamento, permitindo perdas de dados por cliques acidentais).*
 8. **Quebra de Controle de Acesso (Vulnerabilidade Crítica)**: O sistema não verifica se o usuário possui um token de sessão válido nas rotas protegidas. É possível acessar as páginas internas do sistema de forma direta colando a URL no navegador (ex: `/dashboard/campanha/colmeia-forms`), burlando completamente a tela de login.
+9. **Armadilha de Navegação (Navigation Trap)**: Ao entrar em um submenu (como a tela de "Bancos de dados" através do botão de megafone), não há nenhuma forma de retornar à Dashboard principal pela interface da aplicação. A logo "Colmeia" no *header* não é clicável e não existe um botão "Voltar" ou "Home", forçando o usuário a usar as setas do próprio navegador.
+10. **Ausência de Validação de Duplicidade**: O sistema permite a criação de múltiplos bancos de dados com o exato mesmo nome (ex: "nome_duplo"). Em sistemas reais, a falta de restrição de unicidade (Unique Constraint) para entidades críticas como Bancos de Dados pode causar conflitos severos de ID, corrupção de dados e confusão para o usuário final.
+11. **Risco Crítico de Perda de Dados na Exclusão**: Assim como no arquivamento, a função de excluir um banco de dados é ativada instantaneamente ao clique, sem exibir nenhum modal de confirmação (ex: *"Tem certeza que deseja excluir?"*). Tratando-se da deleção de um banco de dados inteiro, um clique acidental resultaria em uma perda catastrófica e irreversível de informações.
+12. **Bypass de Validação (Banco Sem Nome)**: Ao tentar criar um banco de dados vazio, o sistema inicialmente bloqueia a ação e exibe a mensagem de erro *"O nome do item é obrigatório"*. Porém, ao clicar em "Salvar" pela segunda vez, a validação é ignorada (bypass) e o sistema cria a entidade com o nome em branco. Isso demonstra uma grave falha no controle de estado do formulário (React/Angular).
 
 ## 📂 Estrutura do Projeto
 
@@ -43,8 +47,8 @@ Foi criado também um comando customizado em `cypress/support/commands.js` chama
 
 1. **Clone o repositório:**
    ```bash
-   git clone <URL_DO_SEU_REPOSITORIO>
-   cd <NOME_DA_PASTA>
+   git clone <https://github.com/HyagoIFSilva/Coderbity-Desafio>
+   cd <Coderbity-Desafio>
    ```
 
 2. **Instale as dependências:**
@@ -67,9 +71,14 @@ Foi criado também um comando customizado em `cypress/support/commands.js` chama
 
 ## 📝 Boas Práticas Adotadas
 - **Cypress Custom Commands**: Otimização de tempo e legibilidade no fluxo principal.
+- **Integração Contínua (CI/CD)**: O projeto conta com um workflow configurado no Github Actions (`.github/workflows/cypress.yml`) pronto para executar a esteira de testes automaticamente a cada Pull Request.
 - **Base URL centralizada**: O domínio está configurado no `cypress.config.js`, não havendo necessidade de passar links "hardcoded" nos arquivos.
 - **Evidências Claras**: Asserts que testam ativamente o DOM visível para buscar a mensagem do bug no modal, evidenciando falha.
 - **Isolamento de Estado**: Cypress lida naturalmente com limpeza de cookies entre um `it()` e outro (testIsolation ativo), garantindo que um teste não influencie em outro.
+
+## Melhorias Futuras (Decisões Arquiteturais)
+- **Login Programático**: Atualmente, os testes de interface dependem do fluxo visual de login (`beforeEach`). Em um ambiente de produção real com centenas de testes, essa abordagem na UI seria substituída por requisições de API (`cy.request()`) para injetar o token JWT diretamente no navegador, otimizando drasticamente o tempo de execução da esteira de CI/CD.
+- **Data Driven Testing**: Implementar testes utilizando fixtures ou planilhas de dados para varrer múltiplos cenários de formulários com um único bloco de teste estruturado.
 
 ---
 *Desafio desenvolvido com foco em qualidade de software, organização e senso analítico para resolução de problemas reais.*
